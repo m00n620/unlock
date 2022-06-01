@@ -14836,7 +14836,7 @@ __metadata:
     sequelize-typescript: 1.1.0
     setimmediate: 1.0.5
     siwe: 1.1.6
-    stripe: 8.215.0
+    stripe: 9.5.0
     supertest: 6.2.3
     ts-jest: 27.1.4
     ts-node-dev: 1.1.8
@@ -47931,13 +47931,13 @@ resolve@^2.0.0-next.3:
   languageName: node
   linkType: hard
 
-"stripe@npm:8.215.0":
-  version: 8.215.0
-  resolution: "stripe@npm:8.215.0"
+"stripe@npm:9.5.0":
+  version: 9.5.0
+  resolution: "stripe@npm:9.5.0"
   dependencies:
     "@types/node": ">=8.1.0"
     qs: ^6.10.3
-  checksum: 0ccf3c66a259450a63b8d6f27920e04be1fad1207fb6a9c93bdffc250008e1dc915c44bac1d8b4a63be10fcd1865d4aa3de90c79f7966798c43fecab7e4f489d
+  checksum: 496090a380d748897d2ce77da9516ba25c06d81757309989c3bc52d9f11825581103f4b3ebb0af37260968f31961b3273cbbe517830d8a67882d72b933ef4587
   languageName: node
   linkType: hard
 
