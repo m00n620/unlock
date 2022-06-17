@@ -162,7 +162,6 @@ contract MixinTransfer is
   * @notice Only the key owner or the key manager can call this function. If the owner calls it and no
   * key manager is set, then the owner will be set as key manager.
   */
-
   function lendKey(
     address _from,
     address _recipient,
@@ -183,6 +182,24 @@ contract MixinTransfer is
     }
     
     _transferFrom(_from, _recipient, _tokenId);
+  }
+
+  /** 
+  * Unlend is called when you have lent a key and want to claim its full ownership back
+  * @param _recipient the address that will receive the token ownership
+  * @param _tokenId the id of the token
+  * @notice Only the key manager of the token can call this function
+  */
+  function unlendKey(
+    address _recipient,
+    uint _tokenId
+  ) public {
+    _isValidKey(_tokenId);
+
+    if(msg.sender != keyManagerOf[_tokenId]) {
+      revert UNAUTHORIZED();
+    }
+    _transferFrom(ownerOf(_tokenId), _recipient, _tokenId);
   }
 
   /**
