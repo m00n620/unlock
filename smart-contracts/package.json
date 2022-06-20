@@ -51,7 +51,7 @@
     "solidity-coverage": "0.7.21"
   },
   "devDependencies": {
-    "chai": "4.3.4",
+    "chai": "4.3.6",
     "web3": "1.7.3"
   },
   "lint-staged": {
