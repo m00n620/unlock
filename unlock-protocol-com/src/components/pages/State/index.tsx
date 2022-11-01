@@ -1,5 +1,5 @@
 import { Button } from '@unlock-protocol/ui'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   ActiveLock,
   Lock,
@@ -11,6 +11,8 @@ import {
   CeloIcon,
 } from '../../icons'
 import numeral from 'numeral'
+import { ethers } from 'ethers'
+import { networks } from '@unlock-protocol/networks'
 import dynamic from 'next/dynamic'
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
@@ -48,61 +50,25 @@ const NETWORKS = [
   'Avalanche (C-Chain)',
 ]
 
-const GROSS_NETWORK_VALUES = [
+const GROSS_NETWORK_ICONS = [
   {
-    value: 169705.121,
     unit: 'MATIC',
-    title: 'Polygon',
-    total: '2039',
     Icon: PolygonIcon,
   },
   {
-    value: 114285.134,
     unit: 'DAI',
-    title: 'Gnosis Chain',
-    total: '2039',
     Icon: DAIIcon,
   },
   {
-    value: 502.441,
     unit: 'ETH',
-    title: 'Ethereum',
-    total: '1.33',
     Icon: EthereumIcon,
   },
   {
-    value: 1.414,
-    unit: 'oETH',
-    title: 'Optimism',
-    total: '0.33',
-    Icon: EthereumIcon,
-  },
-  {
-    value: 0.112,
-    unit: 'aETH',
-    title: 'Avalanche',
-    total: '0.00',
-    Icon: EthereumIcon,
-  },
-  {
-    value: 0.102,
-    unit: 'aETH',
-    title: 'Arbitrum',
-    total: '0.00',
-    Icon: EthereumIcon,
-  },
-  {
-    value: 0.075,
     unit: 'BNB',
-    title: 'Binance Smart Chain',
-    total: '0.00',
     Icon: BSCIcon,
   },
   {
-    value: 0.021,
     unit: 'CELO',
-    title: 'Celo',
-    total: '0.00',
     Icon: CeloIcon,
   },
 ]
@@ -226,8 +192,65 @@ function DateFilter({
   )
 }
 
+async function getGdpForNetwork(provider, network) {
+  const abi = ['function grossNetworkProduct() constant view returns (uint256)']
+  const contract = new ethers.Contract(network.unlockAddress, abi, provider)
+  const gnp = await contract.grossNetworkProduct()
+  return gnp
+}
+
+async function getGNPs() {
+  const values = await Promise.all(
+    Object.keys(networks).map(async (id) => {
+      try {
+        const network = networks[id]
+        if (!network.unlockAddress) {
+          return null
+        }
+        const provider = new ethers.providers.JsonRpcProvider(network.provider)
+        const gdp = await getGdpForNetwork(provider, network)
+        const total = parseFloat(ethers.utils.formatUnits(gdp, '18'))
+        return { total, network }
+      } catch (error) {
+        console.error('Error retrieving data for', id)
+        console.error(error)
+        return null
+      }
+    })
+  )
+  return values.filter((x) => !!x)
+}
+
 export function State() {
   const [filter, setFilter] = useState('1Y')
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [gnpValues, setGNPValues] = useState<any[]>([])
+
+  useEffect(() => {
+    const run = async () => {
+      const values = await getGNPs()
+      values.sort((a, b) => {
+        if (a.total < b.total) return 1
+        if (a.total > b.total) return -1
+        return 0
+      })
+      const gnpValueswithIcon = values
+        .map((item) => ({
+          ...item,
+          Icon: GROSS_NETWORK_ICONS.find(
+            (icon) =>
+              icon.unit.toLowerCase() ===
+              item.network.baseCurrencySymbol.toLocaleLowerCase()
+          )?.Icon,
+        }))
+        .filter((item) => !item.network.isTestNetwork)
+      console.log(gnpValueswithIcon)
+      setGNPValues(gnpValueswithIcon)
+      setIsLoading(false)
+    }
+    run()
+  }, [])
+
   return (
     <div className="p-6">
       <div className="mx-auto max-w-7xl">
@@ -281,30 +304,34 @@ export function State() {
               <p className="text-2xl space-y-1 font-bold">
                 Gross Network Product
               </p>
-              <div className="grid lg:grid-cols-3 gap-4 md:grid-cols-2 grid-cols-1">
-                {GROSS_NETWORK_VALUES.map(
-                  ({ value, unit, title, total, Icon }, index) => (
+              {!isLoading && (
+                <div className="grid lg:grid-cols-3 gap-4 md:grid-cols-2 grid-cols-1">
+                  {gnpValues.map(({ total, network, Icon }, index) => (
                     <div
                       key={index}
                       className="p-6 border border-gray-300 rounded-md"
                     >
                       <div className="flex justify-start pb-4 border-b border-gray-300">
-                        <Icon className="self-center mr-2 w-10 h-auto" />
+                        {Icon && (
+                          <Icon className="self-center mr-2 w-10 h-auto" />
+                        )}
                         <p className="heading-small pr-2">
-                          {numeral(value).format('0,0.000')}{' '}
+                          {numeral(total).format('0,0.000')}{' '}
                         </p>
-                        <p className="heading-small pr-2">{unit}</p>
+                        <p className="heading-small pr-2">
+                          {network.baseCurrencySymbol.toUpperCase()}
+                        </p>
                       </div>
                       <div className="flex justify-between pt-4">
-                        <p className="font-bold text-xl">{title}</p>
+                        <p className="font-bold text-xl">{network.name}</p>
                         <p className="font-bold text-xl">
-                          +{numeral(total).format('0,0.0')}
+                          +{numeral(0).format('0,0.0')}
                         </p>
                       </div>
                     </div>
-                  )
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
