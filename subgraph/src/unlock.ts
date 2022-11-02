@@ -34,6 +34,7 @@ export function handleNewLock(event: NewLock): void {
   lock.name = lockContract.name()
   lock.expirationDuration = lockContract.expirationDuration()
   lock.totalKeys = BigInt.fromI32(0)
+  lock.createdAt = event.block.timestamp
 
   // default value
   const symbol = lockContract.try_symbol()

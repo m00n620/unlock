@@ -40,12 +40,14 @@ function newKey(event: TransferEvent): void {
     event.params.tokenId,
     event.params.to
   )
+  key.createdAt = event.block.timestamp
   key.save()
 
   // update lock
   const lock = Lock.load(event.address.toHexString())
   if (lock) {
     lock.totalKeys = lock.totalKeys.plus(BigInt.fromI32(1))
+    lock.lastKeyMintedAt = event.block.timestamp
     lock.save()
   }
 }
