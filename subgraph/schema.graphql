@@ -29,3 +29,16 @@ type Key @entity {
   cancelled: Boolean
   createdAt: BigInt!
 }
+
+type LockDayData @entity {
+  id: ID!
+  lockDeployed: BigInt!
+  keysSold: BigInt!
+  activeLocks: BigInt!
+}
+
+type LockStats @entity {
+  id: ID!
+  totalLocksDeployed: BigInt!
+  totalKeysSold: BigInt!
+}
