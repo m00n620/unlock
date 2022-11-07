@@ -11,11 +11,31 @@ import {
   CeloIcon,
 } from '../../icons'
 import numeral from 'numeral'
-import { ethers } from 'ethers'
-import { networks } from '@unlock-protocol/networks'
 import dynamic from 'next/dynamic'
 
+import { getGNPs, querySubgraph } from '../../../utils/apisRequest'
+
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
+
+const subgraphConfig = `{
+  locks {
+    id
+    address
+    name
+    symbol
+    lastKeyMintedAt
+  }
+  lockStats(id:"1") {
+    totalLocksDeployed
+    totalKeysSold
+  }
+  lockDayDatas {
+    id
+    lockDeployed
+    activeLocks
+    keysSold
+  }
+}`
 
 export const OVERVIEW_CONTENTS = [
   {
@@ -192,39 +212,25 @@ function DateFilter({
   )
 }
 
-async function getGdpForNetwork(provider, network) {
-  const abi = ['function grossNetworkProduct() constant view returns (uint256)']
-  const contract = new ethers.Contract(network.unlockAddress, abi, provider)
-  const gnp = await contract.grossNetworkProduct()
-  return gnp
-}
-
-async function getGNPs() {
-  const values = await Promise.all(
-    Object.keys(networks).map(async (id) => {
-      try {
-        const network = networks[id]
-        if (!network.unlockAddress) {
-          return null
-        }
-        const provider = new ethers.providers.JsonRpcProvider(network.provider)
-        const gdp = await getGdpForNetwork(provider, network)
-        const total = parseFloat(ethers.utils.formatUnits(gdp, '18'))
-        return { total, network }
-      } catch (error) {
-        console.error('Error retrieving data for', id)
-        console.error(error)
-        return null
-      }
-    })
-  )
-  return values.filter((x) => !!x)
-}
-
 export function State() {
   const [filter, setFilter] = useState('1Y')
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [gnpValues, setGNPValues] = useState<any[]>([])
+  const [subgraphData, setSubgraphData] = useState({})
+
+  useEffect(() => {
+    const run = async () => {
+      if (gnpValues.length > 0) {
+        const subgraphData = await querySubgraph(
+          'https://api.studio.thegraph.com/query/37457/test-unlock/v0.0.8/',
+          subgraphConfig
+        )
+        setSubgraphData(subgraphData.data)
+        console.log(subgraphData)
+      }
+    }
+    run()
+  }, [])
 
   useEffect(() => {
     const run = async () => {
@@ -240,7 +246,7 @@ export function State() {
           Icon: GROSS_NETWORK_ICONS.find(
             (icon) =>
               icon.unit.toLowerCase() ===
-              item.network.baseCurrencySymbol.toLocaleLowerCase()
+              item.network.baseCurrencySymbol.toLowerCase()
           )?.Icon,
         }))
         .filter((item) => !item.network.isTestNetwork)
@@ -259,7 +265,7 @@ export function State() {
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-2xl space-y-1 font-bold">Overview</p>
-              <div className="grid gap-4 grid-cols-3">
+              <div className="grid gap-1 md:gap-4 grid-cols-1 md:grid-cols-3">
                 {OVERVIEW_CONTENTS.map(
                   ({ value, title, description, Icon }, index) => (
                     <div
@@ -269,14 +275,12 @@ export function State() {
                       <h2 className="heading-small space-y-4">
                         {numeral(value).format('0,0')}
                       </h2>
+                      <p className="py-2 text-lg sm:text-xl lg:text-2xl text-black max-w-prose font-bold">
+                        {title}
+                      </p>
                       <div className="flex justify-between">
-                        <div>
-                          <p className="pt-2 text-lg sm:text-xl lg:text-2xl text-black max-w-prose font-bold">
-                            {title}
-                          </p>
-                          <span>{description}</span>
-                        </div>
-                        <Icon className="self-center not-sr-only" />
+                        <span>{description}</span>
+                        <Icon className="self-center w-7 h-7 not-sr-only" />
                       </div>
                     </div>
                   )
@@ -285,7 +289,7 @@ export function State() {
             </div>
             <div className="space-y-2">
               <p className="text-2xl space-y-1 font-bold">Activity over time</p>
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-2">
                 <select
                   id="network"
                   className="bg-white text-black rounded-md border-none px-4"
@@ -305,7 +309,7 @@ export function State() {
                 Gross Network Product
               </p>
               {!isLoading && (
-                <div className="grid lg:grid-cols-3 gap-4 md:grid-cols-2 grid-cols-1">
+                <div className="grid xl:grid-cols-3 lg:grid-cols-2 gap-4 md:grid-cols-2 grid-cols-1">
                   {gnpValues.map(({ total, network, Icon }, index) => (
                     <div
                       key={index}
@@ -315,10 +319,10 @@ export function State() {
                         {Icon && (
                           <Icon className="self-center mr-2 w-10 h-auto" />
                         )}
-                        <p className="heading-small pr-2">
+                        <p className="heading-small pr-2 self-center">
                           {numeral(total).format('0,0.000')}{' '}
                         </p>
-                        <p className="heading-small pr-2">
+                        <p className="heading-small pr-2 self-center">
                           {network.baseCurrencySymbol.toUpperCase()}
                         </p>
                       </div>
