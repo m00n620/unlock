@@ -115,14 +115,6 @@ createMockedFunction(
   .withArgs([ethereum.Value.fromUnsignedBigInt(BigInt.fromU32(tokenId))])
   .returns([ethereum.Value.fromUnsignedBigInt(BigInt.fromU64(expiration))])
 
-createMockedFunction(
-  Address.fromString(lockAddress),
-  'createdAt',
-  'createdAt():(uint256)'
-)
-  .withArgs([])
-  .returns([ethereum.Value.fromUnsignedBigInt(BigInt.fromU32(now))])
-
 /**
  * Mocks function for < v10 locks
  */

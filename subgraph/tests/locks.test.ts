@@ -81,7 +81,6 @@ describe('Describe Locks events', () => {
       'maxKeysPerAddress',
       `${maxKeysPerAddress}`
     )
-    assert.fieldEquals('Lock', lockAddress, 'createdAt', `${now}`)
   })
 
   test('Lock manager added', () => {

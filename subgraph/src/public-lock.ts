@@ -40,11 +40,10 @@ function newKey(event: TransferEvent): void {
     event.params.tokenId,
     event.params.to
   )
-  key.createdAt = event.block.timestamp
   key.save()
 
   // update lockStats
-  const lockStats = LockStats.load('1')
+  const lockStats = LockStats.load('Total')
   if (lockStats) {
     lockStats.totalKeysSold = lockStats.totalKeysSold.plus(BigInt.fromI32(1))
     lockStats.save()
@@ -232,7 +231,7 @@ export function handleLockManagerRemoved(event: LockManagerRemovedEvent): void {
         newManagers.push(managerAddress)
       }
     }
-    lock.lockManagers = newManagers;
+    lock.lockManagers = newManagers
     lock.save()
   }
 }
