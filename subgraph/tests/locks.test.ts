@@ -37,7 +37,6 @@ import {
   baseTokenURI,
   maxNumberOfKeys,
   maxKeysPerAddress,
-  now,
 } from './constants'
 
 // mock contract functions

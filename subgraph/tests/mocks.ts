@@ -14,7 +14,6 @@ import {
   baseTokenURI,
   maxNumberOfKeys,
   maxKeysPerAddress,
-  now,
 } from './constants'
 
 createMockedFunction(
