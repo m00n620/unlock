@@ -33,7 +33,7 @@ export function handleNewLock(event: NewLock): void {
 
   // create lockDayData
   let timestamp = event.block.timestamp.toI32()
-  let dayID = timestamp
+  let dayID = timestamp / 86400
   let lockDayData = LockDayData.load(dayID.toString())
   if (lockDayData === null) {
     lockDayData = new LockDayData(dayID.toString())

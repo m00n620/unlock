@@ -50,7 +50,7 @@ function newKey(event: TransferEvent): void {
   }
 
   // update lockDayData
-  const dayID = event.block.timestamp.toI32()
+  const dayID = event.block.timestamp.toI32() / 86400
   const lockDayData = LockDayData.load(dayID.toString())
   if (lockDayData) {
     let activeLocks = lockDayData.activeLocks
