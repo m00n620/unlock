@@ -55,7 +55,7 @@ function newKey(event: TransferEvent): void {
   if (lockDayData) {
     let activeLocks = lockDayData.activeLocks
     lockDayData.keysSold = lockDayData.keysSold.plus(BigInt.fromI32(1))
-    if (activeLocks) {
+    if (activeLocks && !activeLocks.includes(event.address)) {
       activeLocks.push(event.address)
       lockDayData.activeLocks = activeLocks
     }
