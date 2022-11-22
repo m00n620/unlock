@@ -4,7 +4,7 @@ import { log, BigInt, ethereum } from '@graphprotocol/graph-ts'
 import { NewLock, LockUpgraded } from '../generated/Unlock/Unlock'
 import { PublicLock as PublicLockMerged } from '../generated/templates/PublicLock/PublicLock'
 import { PublicLock } from '../generated/templates'
-import { Lock, LockStats, LockDayData } from '../generated/schema'
+import { Lock, LockStats, UnlockDailyData } from '../generated/schema'
 import { LOCK_MANAGER } from './helpers'
 
 const ROLE_GRANTED =
@@ -18,9 +18,9 @@ export function handleNewLock(event: NewLock): void {
   const lock = new Lock(lockID)
 
   // create new lockStats if not existing
-  let lockStats = LockStats.load('Total')
+  let lockStats = LockStats.load('Unlock')
   if (lockStats === null) {
-    lockStats = new LockStats('Total')
+    lockStats = new LockStats('Unlock')
     lockStats.totalLocksDeployed = BigInt.fromI32(0)
     lockStats.totalKeysSold = BigInt.fromI32(0)
     lockStats.save()
@@ -34,16 +34,18 @@ export function handleNewLock(event: NewLock): void {
   // create lockDayData
   let timestamp = event.block.timestamp.toI32()
   let dayID = timestamp / 86400
-  let lockDayData = LockDayData.load(dayID.toString())
-  if (lockDayData === null) {
-    lockDayData = new LockDayData(dayID.toString())
-    lockDayData.lockDeployed = BigInt.fromI32(1)
-    lockDayData.keysSold = BigInt.fromI32(0)
-    lockDayData.activeLocks = []
-    lockDayData.save()
+  let unlockDailyData = UnlockDailyData.load(dayID.toString())
+  if (unlockDailyData === null) {
+    unlockDailyData = new UnlockDailyData(dayID.toString())
+    unlockDailyData.lockDeployed = BigInt.fromI32(1)
+    unlockDailyData.keysSold = BigInt.fromI32(0)
+    unlockDailyData.activeLocks = []
+    unlockDailyData.save()
   } else {
-    lockDayData.lockDeployed = lockDayData.lockDeployed.plus(BigInt.fromI32(1))
-    lockDayData.save()
+    unlockDailyData.lockDeployed = unlockDailyData.lockDeployed.plus(
+      BigInt.fromI32(1)
+    )
+    unlockDailyData.save()
   }
 
   // fetch lock version
@@ -60,6 +62,7 @@ export function handleNewLock(event: NewLock): void {
   // store lock info from contract
   lock.tokenAddress = lockContract.tokenAddress()
   lock.price = lockContract.keyPrice()
+  lock.dayId = BigInt.fromI32(dayID)
   lock.name = lockContract.name()
   lock.expirationDuration = lockContract.expirationDuration()
   lock.totalKeys = BigInt.fromI32(0)
@@ -72,12 +75,13 @@ export function handleNewLock(event: NewLock): void {
     lock.symbol = 'KEY'
   }
 
-  let maxKeysPerAddress = lockContract.try_maxKeysPerAddress()
-  if (!maxKeysPerAddress.reverted) {
-    lock.maxKeysPerAddress = maxKeysPerAddress.value
-  } else {
-    // set to 1 when using address instead of tokenId prior to lock v10
-    lock.maxKeysPerAddress = BigInt.fromI32(1)
+  // maxKeysPerAddress set to 1 prior to lock v10
+  lock.maxKeysPerAddress = BigInt.fromI32(1)
+  if (version.ge(BigInt.fromI32(9))) {
+    let maxKeysPerAddress = lockContract.try_maxKeysPerAddress()
+    if (!maxKeysPerAddress.reverted) {
+      lock.maxKeysPerAddress = maxKeysPerAddress.value
+    }
   }
 
   let maxNumberOfKeys = lockContract.try_maxNumberOfKeys()
@@ -90,8 +94,13 @@ export function handleNewLock(event: NewLock): void {
   lock.version = version
   lock.createdAtBlock = event.block.number
 
-  // lock managers are parsed from RoleGranted events
-  lock.lockManagers = []
+  if (version.le(BigInt.fromI32(8))) {
+    // prior to v8, add default lock manager
+    lock.lockManagers = [event.params.lockOwner]
+  } else {
+    // after v8, lock managers are parsed from `RoleGranted` events
+    lock.lockManagers = []
+  }
 
   lock.save()
 
