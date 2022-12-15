@@ -286,7 +286,6 @@ export function State() {
           break
         }
       }
-
       setXaxis({
         categories: xAxisLabels,
       })
