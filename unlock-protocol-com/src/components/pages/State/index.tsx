@@ -113,12 +113,12 @@ function RenderChart({ series, xaxis }: { series: any; xaxis?: any }) {
   }
 
   return (
-    <div className="w-full h-80">
+    <div className="w-full h-[400px]">
       <ReactApexChart
         options={chartOptions.options}
         series={series}
         type="line"
-        height={320}
+        height={400}
       />
     </div>
   )
@@ -205,9 +205,6 @@ export function State() {
     useState<INetworkSubgraph | undefined>(undefined)
   const [series, setSeries] = useState<ISeries[]>([])
   const [xaxis, setXaxis] = useState<IXaxis | undefined>(undefined)
-  const [gnpTotalValueByNetwork, setGnpTotalValueByNetwork] = useState<
-    IGNPSum[]
-  >([])
   const [gnpPByNetworks, setGNPPByNetworks] = useState<any[]>([])
 
   useEffect(() => {
@@ -260,28 +257,28 @@ export function State() {
         case '1Y': {
           xAxisLabels = [...Array(12).keys()].reverse().map((key) => {
             const cur = new Date()
-            return new Date(cur.setDate(cur.getDate() - key)).toLocaleString(
+            return new Date(cur.setMonth(cur.getMonth() - key)).toLocaleString(
               'default',
               { dateStyle: 'short' }
             )
           })
           timestampArray = [...Array(12).keys()].reverse().map((key) => {
             const cur = new Date()
-            return Math.round(cur.setDate(cur.getDate() - key) / 86400000)
+            return Math.round(cur.setMonth(cur.getMonth() - key) / 86400000)
           })
           break
         }
         case 'All': {
           xAxisLabels = [...Array(36).keys()].reverse().map((key) => {
             const cur = new Date()
-            return new Date(cur.setDate(cur.getDate() - key)).toLocaleString(
+            return new Date(cur.setMonth(cur.getMonth() - key)).toLocaleString(
               'default',
               { dateStyle: 'short' }
             )
           })
           timestampArray = [...Array(36).keys()].reverse().map((key) => {
             const cur = new Date()
-            return Math.round(cur.setDate(cur.getDate() - key) / 86400000)
+            return Math.round(cur.setMonth(cur.getMonth() - key) / 86400000)
           })
           break
         }
@@ -386,25 +383,37 @@ export function State() {
   }, [selectedNetwork, filter, subgraphData])
 
   useEffect(() => {
+    const gnpDataByNetworks = subgraphData.map((networkData) => ({
+      name: networkData.name,
+      gnpSum: parseFloat(
+        utils.formatUnits(
+          BigInt(
+            networkData.data.unlockDailyDatas.reduce(
+              (pv, b) => pv + parseInt(b.grossNetworkProduct),
+              0
+            )
+          ),
+          '18'
+        )
+      ),
+    }))
     const gnpPercentageByNetworks = subgraphData.map((networkData) => {
+      const interalDay =
+        currentDay -
+        (filter === '1D'
+          ? 2
+          : filter === '7D'
+          ? 8
+          : filter === '1M'
+          ? 31
+          : filter === '1Y'
+          ? 200
+          : 10000)
       const sumOfGNP = parseFloat(
         utils.formatUnits(
           BigInt(
             networkData.data.unlockDailyDatas
-              .filter(
-                (item) =>
-                  item.id >=
-                    currentDay -
-                      (filter === '1D'
-                        ? 2
-                        : filter === '7D'
-                        ? 8
-                        : filter === '1M'
-                        ? 31
-                        : filter === '1Y'
-                        ? 200
-                        : 10000) && item.id <= currentDay
-              )
+              .filter((item) => item.id >= interalDay && item.id <= currentDay)
               .reduce((pv, b) => pv + parseInt(b.grossNetworkProduct), 0)
           ),
           '18'
@@ -414,12 +423,12 @@ export function State() {
         name: networkData.name,
         gnpPercentage:
           sumOfGNP /
-          gnpTotalValueByNetwork.find((item) => item.name === networkData.name)
+          gnpDataByNetworks.find((item) => item.name === networkData.name)
             ?.gnpSum,
       }
     })
     setGNPPByNetworks(gnpPercentageByNetworks)
-  }, [filter])
+  }, [filter, subgraphData])
 
   useEffect(() => {
     const run = async () => {
@@ -467,22 +476,7 @@ export function State() {
           Icon: ActiveLock,
         },
       ]
-      const gnpDataByNetworks = subgraphData.map((networkData) => ({
-        name: networkData.name,
-        gnpSum: parseFloat(
-          utils.formatUnits(
-            BigInt(
-              networkData.data.unlockDailyDatas.reduce(
-                (pv, b) => pv + parseInt(b.grossNetworkProduct),
-                0
-              )
-            ),
-            '18'
-          )
-        ),
-      }))
       setOverViewData(overview_contents)
-      setGnpTotalValueByNetwork(gnpDataByNetworks)
     }
   }, [subgraphData])
 
